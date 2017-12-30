@@ -114,8 +114,35 @@ object WordCount {
         L_new.remove(bigX)
       }
     }
-    println(L_new)
     L_new.toSet
+  }
+
+  def output(tuples: ArrayBuffer[(Set[Int], Int)]): Unit ={
+    var temp_dict = mutable.Map.empty[Set[Int],mutable.ArrayBuffer[Int]]
+    for (elem <- tuples) {
+        if (!temp_dict.contains(elem._1)){
+          temp_dict(elem._1) = mutable.ArrayBuffer.empty[Int]
+        }
+        temp_dict(elem._1) += elem._2
+    }
+    temp_dict.keys.foreach{
+      key_keys => var temp = "["
+      for((key,index) <- key_keys.zipWithIndex){
+        temp += "column"  + (key+1)
+        if(index < key_keys.size -1){
+          temp += ","
+        }
+      }
+        temp += "]:"
+        for((value,index) <- temp_dict(key_keys).zipWithIndex){
+          temp += "column" + (value+2)
+          if(index < temp_dict(key_keys).size -1){
+            temp += ","
+          }
+        }
+        temp += "\n"
+        println(temp)
+    }
   }
 
   def main(args: Array[String]) {
@@ -124,7 +151,9 @@ object WordCount {
     for (i <- 0 to 9) {
       L = compute_dependencies(generate_next_level(L))
     }
-    println(fds)
+
+    output(fds)
+    println(fds.size)
 
   }
 
