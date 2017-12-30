@@ -1,7 +1,7 @@
-//import org.apache.spark.SparkContext
-//import org.apache.spark.SparkContext._
-//import org.apache.spark.SparkConf
-//import org.apache.spark.rdd.RDD
+import org.apache.spark.SparkContext
+import org.apache.spark.SparkContext._
+import org.apache.spark.SparkConf
+import org.apache.spark.rdd.RDD
 
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
@@ -11,13 +11,14 @@ import scala.io.Source
 
 object WordCount {
 
-  //  val inputFile = "file:///Users/gaoliang/Downloads/WordCount/src/main/resources/bots_200_10.csv"
-  //  val conf: SparkConf = new SparkConf().setAppName("WordCount").setMaster("local")
-  //  val sc = new SparkContext(conf)
-  //val lines: RDD[String] = sc.textFile(inputFile)
+  val inputFile = "file:///Users/gaoliang/Downloads/WordCount/src/main/resources/bots_200_10.csv"
+  val conf: SparkConf = new SparkConf().setAppName("WordCount").setMaster("local")
+  val sc = new SparkContext(conf)
+//  val lines: RDD[String] = sc.textFile(inputFile)
+//  var table = lines.map(line => line.split(",", 0).toList)
 
 
-  // translate from python code
+  // translate from python code :< no Maintenance TAT
   var partitions = mutable.Map.empty[Set[Int], ArrayBuffer[ArrayBuffer[Long]]]
   var fds = ArrayBuffer.empty[Tuple2[Set[Int], Int]]
   var R = Set(0, 1, 2, 3, 4, 5, 6, 7, 8, 9)
@@ -69,8 +70,11 @@ object WordCount {
     }
     else if (attributes.size == 1) {
       var iAttr = attributes.toList.head
+      // FIXME 使用scala的文件读取没问题, 是RDD会出问题（根本不懂spark...
       var lines = Source.fromFile("/Users/gaoliang/Downloads/WordCount/src/main/resources/bots_200_10.csv").getLines()
       var table = lines.map(line => line.split(",", 0).toList)
+//      val lines: RDD[String] = sc.textFile(inputFile)
+//      var table = lines.map(line => line.split(",", 0).toList)
       var d = mutable.Map.empty[String, ArrayBuffer[Long]]
       for ((row, index) <- table.zipWithIndex) {
         if (!d.contains(row(iAttr))) {
@@ -86,11 +90,12 @@ object WordCount {
       var ps2 = get_partition(attr_tuple.slice(0, attr_tuple.size - 2).toSet + attr_tuple.last)
       partitions.put(attributes, merge_partition(ps1, ps2))
     }
-    return partitions(attributes)
+    partitions(attributes)
   }
 
+
   def isValid(X: Set[Int], E: Int): Boolean = {
-    return get_partition(X -- Set(E)).size == get_partition(X).size
+    get_partition(X -- Set(E)).size == get_partition(X).size
   }
 
   def compute_dependencies(L: Set[Set[Int]]): Set[Set[Int]] = {
@@ -117,7 +122,9 @@ object WordCount {
     L_new.toSet
   }
 
+
   def output(tuples: ArrayBuffer[(Set[Int], Int)]): Unit ={
+    // todo 需要输出到文件？
     var temp_dict = mutable.Map.empty[Set[Int],mutable.ArrayBuffer[Int]]
     for (elem <- tuples) {
         if (!temp_dict.contains(elem._1)){
@@ -151,10 +158,7 @@ object WordCount {
     for (i <- 0 to 9) {
       L = compute_dependencies(generate_next_level(L))
     }
-
     output(fds)
-    println(fds.size)
-
   }
 
 
