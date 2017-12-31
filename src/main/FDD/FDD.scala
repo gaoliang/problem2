@@ -9,20 +9,38 @@ import scala.io.Source
 // 使用List代替python中的tuple类型
 // 使用ArrayBuffer代替python中的list类型
 
-object WordCount {
-
-  val inputFile = "file:///Users/gaoliang/Downloads/WordCount/src/main/resources/bots_200_10.csv"
-  val conf: SparkConf = new SparkConf().setAppName("WordCount").setMaster("local")
-  val sc = new SparkContext(conf)
-//  val lines: RDD[String] = sc.textFile(inputFile)
-//  var table = lines.map(line => line.split(",", 0).toList)
-
+object FDD {
 
   // translate from python code :< no Maintenance TAT
+  var  count = 0
   var partitions = mutable.Map.empty[Set[Int], ArrayBuffer[ArrayBuffer[Long]]]
   var fds = ArrayBuffer.empty[Tuple2[Set[Int], Int]]
-  var R = Set(0, 1, 2, 3, 4, 5, 6, 7, 8, 9)
-  var RHS = mutable.Map(Set[Int]() -> R)
+  var R = Set.empty[Int]
+  var RHS = mutable.Map.empty[Set[Int],Set[Int]]
+  var result = mutable.ArrayBuffer.empty[String]
+  var table = Iterable.empty[List[String]]
+
+
+  def main(args: Array[String]) {
+    val inputFile = args(0)
+    val col_number = args(1).toInt
+    R = Set(0 until col_number:_*)
+    RHS(Set[Int]()) = R
+    //    val inputFile = "file:///Users/gaoliang/Downloads/WordCount/src/main/resources/bots_200_10.csv"
+    val conf: SparkConf = new SparkConf().setAppName("FDD").setMaster("local")
+    val sc = new SparkContext(conf)
+    val rdd: RDD[String] = sc.textFile(inputFile)
+    var lines = rdd.collect()
+    table = lines.map(line => line.split(",", 0).toList)
+    var L = R.map(x => Set(x))
+    L = compute_dependencies(L)
+    for (i <- 0 to 9) {
+      L = compute_dependencies(generate_next_level(L))
+    }
+    output(fds)
+    sc.parallelize(result).saveAsTextFile("result")
+  }
+
 
   def merge_partition(ps1: ArrayBuffer[ArrayBuffer[Long]],
                       ps2: ArrayBuffer[ArrayBuffer[Long]])
@@ -71,10 +89,10 @@ object WordCount {
     else if (attributes.size == 1) {
       var iAttr = attributes.toList.head
       // FIXME 使用scala的文件读取没问题, 是RDD会出问题（根本不懂spark...
-      var lines = Source.fromFile("/Users/gaoliang/Downloads/WordCount/src/main/resources/bots_200_10.csv").getLines()
-      var table = lines.map(line => line.split(",", 0).toList)
-//      val lines: RDD[String] = sc.textFile(inputFile)
-//      var table = lines.map(line => line.split(",", 0).toList)
+      //      var lines = Source.fromFile("/Users/gaoliang/Downloads/WordCount/src/main/resources/bots_200_10.csv").getLines()
+      //      var table = lines.map(line => line.split(",", 0).toList)
+      //      val lines: RDD[String] = sc.textFile(inputFile)
+      //      var table = lines.map(line => line.split(",", 0).toList)
       var d = mutable.Map.empty[String, ArrayBuffer[Long]]
       for ((row, index) <- table.zipWithIndex) {
         if (!d.contains(row(iAttr))) {
@@ -127,39 +145,29 @@ object WordCount {
     // todo 需要输出到文件？
     var temp_dict = mutable.Map.empty[Set[Int],mutable.ArrayBuffer[Int]]
     for (elem <- tuples) {
-        if (!temp_dict.contains(elem._1)){
-          temp_dict(elem._1) = mutable.ArrayBuffer.empty[Int]
-        }
-        temp_dict(elem._1) += elem._2
+      if (!temp_dict.contains(elem._1)){
+        temp_dict(elem._1) = mutable.ArrayBuffer.empty[Int]
+      }
+      temp_dict(elem._1) += elem._2
     }
     temp_dict.keys.foreach{
       key_keys => var temp = "["
-      for((key,index) <- key_keys.zipWithIndex){
-        temp += "column"  + (key+1)
-        if(index < key_keys.size -1){
-          temp += ","
+        for((key,index) <- key_keys.zipWithIndex){
+          temp += "column"  + (key+1)
+          if(index < key_keys.size -1){
+            temp += ","
+          }
         }
-      }
         temp += "]:"
         for((value,index) <- temp_dict(key_keys).zipWithIndex){
-          temp += "column" + (value+2)
+          temp += "column" + (value+1)
           if(index < temp_dict(key_keys).size -1){
             temp += ","
           }
         }
-        temp += "\n"
         println(temp)
+        result.append(temp)
     }
   }
-
-  def main(args: Array[String]) {
-    var L = R.map(x => Set(x))
-    L = compute_dependencies(L)
-    for (i <- 0 to 9) {
-      L = compute_dependencies(generate_next_level(L))
-    }
-    output(fds)
-  }
-
-
 }
+
